@@ -33,7 +33,7 @@ def compare_images(path_one, path_two):
         return False
 
 
-class CompareImageOptions:
+class ImageOptions:
     def __init__(self):
         self.parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         self.initialized = False
@@ -52,8 +52,9 @@ class CompareImageOptions:
 
 # python3 CompareImage.py --path=./images
 if __name__ == '__main__':
-    opt = CompareImageOptions().parse()
+    opt = ImageOptions().parse()
     print('start compare image', opt)
+    tt = time.time()
     path = opt.path
     flist = os.listdir(path)
 
@@ -65,3 +66,5 @@ if __name__ == '__main__':
             if result:
                 print("删除的文件", image2)
                 os.remove(image2)
+
+    print('time2 end:', time.time() - tt)
