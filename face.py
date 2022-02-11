@@ -59,12 +59,13 @@ if __name__ == '__main__':
     if not os.path.exists(bodyRoot):
         os.makedirs(bodyRoot)
 
-    executor = ThreadPoolExecutor(max_workers=4)
+    executor = ThreadPoolExecutor(max_workers=1)
     for index1 in range(0, len(flist)):
         image = path + os.sep + flist[index1]
         # face(image, faceRoot, bodyRoot)
         futures = []
         task = executor.submit(face, image, faceRoot, bodyRoot)
         futures.append(task)
+
 
     print('time2 end:', time.time() - tt)

@@ -4,6 +4,7 @@ from PIL import ImageChops
 import time
 import os
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 def compare_images(path_one, path_two):
@@ -53,18 +54,22 @@ class ImageOptions:
 # python3 CompareImage.py --path=./images
 if __name__ == '__main__':
     opt = ImageOptions().parse()
-    print('start compare image', opt)
+    print('开始比较图片', opt)
     tt = time.time()
     path = opt.path
     flist = os.listdir(path)
-
+    executor = ThreadPoolExecutor(max_workers=4)
     for index1 in range(0, len(flist)):
         image1 = path + os.sep + flist[index1]
         for index2 in range(index1 + 1, len(flist)):
             image2 = path + os.sep + flist[index2]
-            result = compare_images(image1, image2)
-            if result:
-                print("删除的文件", image2)
-                os.remove(image2)
+            futures = []
+            task = executor.submit(compare_images, image1, image2)
+            futures.append(task)
 
-    print('time2 end:', time.time() - tt)
+            for future in as_completed(futures):
+                if future.result():
+                    print("删除的文件", image2)
+                    os.remove(image2)
+
+    print('比较结束:', time.time() - tt)
