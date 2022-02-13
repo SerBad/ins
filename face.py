@@ -6,14 +6,14 @@ import time
 import os
 import shutil
 import argparse
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, ProcessPoolExecutor
 import numpy as np
+import pandas
 
 
-def face(imagePath, faceRoot, bodyRoot):
+def face(imagePath: str, faceRoot: str, bodyRoot: str):
     image = face_recognition.load_image_file(imagePath)
     face_locations = face_recognition.face_locations(image)
-
     if len(face_locations) == 0:
         print(imagePath, "没有脸")
     else:
@@ -51,21 +51,20 @@ if __name__ == '__main__':
     tt = time.time()
     path = opt.path
     flist = os.listdir(path)
-    faceRoot = "." + os.sep + "face"
-    bodyRoot = "." + os.sep + "body"
+    faceRoot = path + "Face"
+    bodyRoot = path + "Body"
     if not os.path.exists(faceRoot):
         os.makedirs(faceRoot)
 
     if not os.path.exists(bodyRoot):
         os.makedirs(bodyRoot)
 
-    executor = ThreadPoolExecutor(max_workers=1)
+    executor = ProcessPoolExecutor(max_workers=8)
+    futures = []
     for index1 in range(0, len(flist)):
         image = path + os.sep + flist[index1]
         # face(image, faceRoot, bodyRoot)
-        futures = []
         task = executor.submit(face, image, faceRoot, bodyRoot)
         futures.append(task)
-
 
     print('time2 end:', time.time() - tt)

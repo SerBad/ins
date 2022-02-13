@@ -4,7 +4,9 @@ from PIL import ImageChops
 import time
 import os
 import argparse
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, ProcessPoolExecutor
+
+Image.LOAD_TRUNCATED_IMAGES = True
 
 
 def compare_images(path_one, path_two):
@@ -32,6 +34,13 @@ def compare_images(path_one, path_two):
     except ValueError as e:
         # return "{0}\n{1}".format(e, "图片大小和box对应的宽度不一致!")
         return False
+    except Exception as e:
+        print(path_one, path_two, e)
+        return False
+    except:
+        return False
+
+    return False
 
 
 class ImageOptions:
@@ -58,7 +67,7 @@ if __name__ == '__main__':
     tt = time.time()
     path = opt.path
     flist = os.listdir(path)
-    executor = ThreadPoolExecutor(max_workers=4)
+    executor = ProcessPoolExecutor(max_workers=8)
     for index1 in range(0, len(flist)):
         image1 = path + os.sep + flist[index1]
         for index2 in range(index1 + 1, len(flist)):
