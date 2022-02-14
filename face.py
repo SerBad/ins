@@ -12,25 +12,32 @@ import pandas
 
 
 def face(imagePath: str, faceRoot: str, bodyRoot: str):
-    image = face_recognition.load_image_file(imagePath)
-    face_locations = face_recognition.face_locations(image)
     base_name = os.path.basename(imagePath)
-    if len(face_locations) == 0:
-        print(imagePath, "没有脸")
-        shutil.copyfile(imagePath, os.path.join(bodyRoot, base_name))
-        return 1, [base_name, []]
-    else:
-        for face_location in face_locations:
-            # Print the location of each face in this image
-            top, right, bottom, left = face_location
-            print(imagePath, bottom - top, right - left, "height:", image.shape[0], "width:", image.shape[1])
+    try:
+        image = face_recognition.load_image_file(imagePath)
+        face_locations = face_recognition.face_locations(image)
 
-            if (bottom - top * 1.0) / image.shape[0] >= 0.4 and (right - left * 1.0) / image.shape[1] >= 0.4:
-                shutil.copyfile(imagePath, os.path.join(faceRoot, base_name))
-                return 2, [base_name, [top, right, bottom, left]]
-            else:
-                shutil.copyfile(imagePath, os.path.join(bodyRoot, base_name))
-                return 1, [base_name, [top, right, bottom, left]]
+        if len(face_locations) == 0:
+            print(imagePath, "没有脸")
+            shutil.copyfile(imagePath, os.path.join(bodyRoot, base_name))
+            return 1, [base_name, []]
+        else:
+            for face_location in face_locations:
+                # Print the location of each face in this image
+                top, right, bottom, left = face_location
+                print(imagePath, bottom - top, right - left, "height:", image.shape[0], "width:", image.shape[1])
+
+                if (bottom - top * 1.0) / image.shape[0] >= 0.3 and (right - left * 1.0) / image.shape[1] >= 0.3:
+                    shutil.copyfile(imagePath, os.path.join(faceRoot, base_name))
+                    return 2, [base_name, [top, right, bottom, left]]
+                else:
+                    shutil.copyfile(imagePath, os.path.join(bodyRoot, base_name))
+                    return 1, [base_name, [top, right, bottom, left]]
+
+    except Exception as e:
+        print(imagePath, e)
+
+    return 0, [base_name, []]
 
 
 class ImageOptions:
@@ -65,32 +72,34 @@ if __name__ == '__main__':
         os.makedirs(bodyRoot)
 
     executor = ProcessPoolExecutor(max_workers=8)
-    columns1 = ["image", "face"]
+    columns1 = ["image", "face[top, right, bottom, left]"]
     resultFaceData = []
     resultBodyData = []
-    futures = []
-
+    errorImageSize = 0
     for index1 in range(0, len(flist)):
         image = path + os.sep + flist[index1]
         # face(image, faceRoot, bodyRoot)
-
+        futures = []
         task = executor.submit(face, image, faceRoot, bodyRoot)
         futures.append(task)
 
-    for future in as_completed(futures):
-        is_face, face = future.result()
-        if is_face == 1:
-            resultBodyData.append(face)
-        elif is_face == 2:
-            resultFaceData.append(face)
-        futures.remove(future)
+        for future in as_completed(futures):
+            is_face, data = future.result()
+            if is_face == 1:
+                resultBodyData.append(data)
+            elif is_face == 2:
+                resultFaceData.append(data)
+            else:
+                errorImageSize += 1
 
-        if len(futures) == 0:
-            resultFace = pandas.ExcelWriter(faceRoot + os.sep + "tags.xlsx")
-            resultBody = pandas.ExcelWriter(bodyRoot + os.sep + "tags.xlsx")
-            pandas.DataFrame(resultFaceData, columns=columns1).to_excel(resultFace, index=False)
-            resultFace.save()
-            pandas.DataFrame(resultBodyData, columns=columns1).to_excel(resultBody, index=False)
-            resultBody.save()
+            futures.remove(future)
+
+            if len(resultFaceData) + len(resultBodyData) + errorImageSize == len(flist):
+                resultFace = pandas.ExcelWriter(faceRoot + os.sep + "tags.xlsx")
+                resultBody = pandas.ExcelWriter(bodyRoot + os.sep + "tags.xlsx")
+                pandas.DataFrame(resultFaceData, columns=columns1).to_excel(resultFace, index=False)
+                resultFace.save()
+                pandas.DataFrame(resultBodyData, columns=columns1).to_excel(resultBody, index=False)
+                resultBody.save()
 
     print('time2 end:', time.time() - tt)
